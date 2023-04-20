@@ -5,7 +5,7 @@ from typing import Any
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential
 import pyodbc
-environment = os.environ.get("ENVIRONMENT", default="sandbox")
+environment = os.environ.get("ENVIRONMENT", default="dev")
 
 
 def odbc_cursor() -> Any:
