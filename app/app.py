@@ -12,11 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import os
 from dash import Dash, page_registry
 from layout.appshell import create_appshell
 from databases import odbc_cursor, cosmos_client
 
 
+environment = os.environ.get("ENVIRONMENT", default="dev")
 
 app = Dash(
     __name__,
