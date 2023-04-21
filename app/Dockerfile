@@ -18,13 +18,13 @@ FROM python:3.10.10-bullseye
 WORKDIR /app
 
 # Copy the required files into the working directory
-COPY *.py requirements.txt /app/
+COPY . /app/
 
 # Install the odbc Drivers to access the database
 RUN apt-get update && apt-get install -y --no-install-recommends locales apt-transport-https \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/11/prod.list \
-        > /etc/apt/sources.list.d/mssql-release.list \
+    > /etc/apt/sources.list.d/mssql-release.list \
     && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
     && locale-gen \
     && apt-get update \
