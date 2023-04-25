@@ -17,11 +17,21 @@ FROM python:3.10.10-bullseye
 # Create and run commands in /app inside the container
 WORKDIR /app
 
-# Copy the required files into the working directory
-COPY . /app/
+# Install the azure cli
+RUN apt-get update \
+    && apt-get -y --no-install-recommends install ca-certificates curl apt-transport-https lsb-release gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -sLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | tee /etc/apt/keyrings/microsoft.gpg > /dev/null \
+    && chmod go+r /etc/apt/keyrings/microsoft.gpg \
+    && AZ_REPO=$(lsb_release -cs) \
+    && echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
+    tee /etc/apt/sources.list.d/azure-cli.list \
+    && apt-get update \
+    && apt-get -y --no-install-recommends install azure-cli
 
 # Install the odbc Drivers to access the database
-RUN apt-get update && apt-get install -y --no-install-recommends locales apt-transport-https \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends locales apt-transport-https \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/11/prod.list \
     > /etc/apt/sources.list.d/mssql-release.list \
@@ -31,6 +41,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends locales apt-tra
     && apt-get -y --no-install-recommends install unixodbc-dev libodbc1 \
     && ACCEPT_EULA=Y apt-get -y --no-install-recommends install msodbcsql18
 
+# Get requirements for pip install
+COPY requirements.txt /app/
+
 # Install the Python dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && \
@@ -39,6 +52,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Create and use a non-root user
 RUN useradd -m appUser
 USER appUser
+
+# Copy the required files into the working directory
+COPY . /app/
 
 # Serve the app on port 8000
 CMD gunicorn --bind 0.0.0.0:8000 app:server
