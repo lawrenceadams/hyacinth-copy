@@ -1,6 +1,5 @@
 import pandas as pd
-from databases import odbc_cursor, cosmos_client
-from dev import db_aad_token_struct
+from databases import odbc_cursor
 from dash import Input, Output, callback
 from pathlib import Path
 
