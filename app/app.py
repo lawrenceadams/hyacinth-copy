@@ -19,10 +19,10 @@ from dash import Dash, page_registry
 from layout.appshell import create_appshell
 from databases import odbc_cursor, cosmos_client
 
+environment = os.environ.get("ENVIRONMENT", default="dev")
 
 initialize_logging(environment, logging.INFO)
 logging.info("Logging initialised.")
-environment = os.environ.get("ENVIRONMENT", default="dev")
 
 app = Dash(
     __name__,
@@ -47,6 +47,8 @@ app.config.suppress_callback_exceptions = True
 app.layout = create_appshell([page_registry.values()])
 
 server = app.server
+
+cursor = odbc_cursor()
 
 if __name__ == "__main__":
     logging.info("Starting app...")

@@ -1,6 +1,7 @@
 import os
 from typing import Any
 from dev import db_aad_token_struct
+import logging
 
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
