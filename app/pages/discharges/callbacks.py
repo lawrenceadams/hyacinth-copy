@@ -14,3 +14,14 @@ def get_discharges(dept_selector, campus_selector):
     df = pd.read_sql(query, conn)
     conn.close()
     return df.to_dict('records')
+
+@callback(
+    Output("dept_selector", "data"),
+    Input("campus_selector", "value"),
+)
+def get_wards(campus_selector):
+    ## TODO: get wards from database 
+    # On HyUI I think this is from BaseRow
+    # so perhaps to be converted to a table in the CosmosDB database 
+
+    return ["UCH T03 INTENSIVE CARE", "TEST WARD 2", "TEST WARD 3"]
