@@ -12,6 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import struct
+import logging
 
 
 def db_aad_token_struct() -> bytes:
@@ -26,5 +27,7 @@ def db_aad_token_struct() -> bytes:
     token = credential.get_token("https://database.windows.net/")[0]
 
     token_bytes = bytes(token, "UTF-16 LE")
+
+    logging.info("AAD token generated.")
 
     return struct.pack("=i", len(token_bytes)) + token_bytes
