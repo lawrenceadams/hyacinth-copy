@@ -46,9 +46,10 @@ discharges_table = dmc.Paper(
         id="discharges_table",
         columns=[
             {"id": "ward", "name": "Ward"},
+            {"id": "mrn", "name": "MRN"},
             {"id": "fullname", "name": "Full Name"},
             {"id": "sex", "name": "Age / Sex"},
-            {"id": "mrn", "name": "NEWS"},
+            {"id": "news", "name": "NEWS"},
             {"id": "admission_datetime", "name": "Admission Date"},
             {"id": "pred_discharge", "name": "Predicted Discharge"},
         ],
