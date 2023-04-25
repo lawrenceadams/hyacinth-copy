@@ -29,6 +29,7 @@ RUN apt-get update \
     && apt-get update \
     && apt-get -y --no-install-recommends install azure-cli
 
+
 # Install the odbc Drivers to access the database
 RUN apt-get update \
     && apt-get install -y --no-install-recommends locales apt-transport-https \
