@@ -12,13 +12,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import logging
 import os
+from azure_logging import initialize_logging
 from dash import Dash, page_registry
 from layout.appshell import create_appshell
 from databases import odbc_cursor, cosmos_client
 
-
 environment = os.environ.get("ENVIRONMENT", default="dev")
+
+initialize_logging(environment, logging.INFO)
+logging.info("Logging initialised.")
 
 app = Dash(
     __name__,
@@ -44,5 +48,8 @@ app.layout = create_appshell([page_registry.values()])
 
 server = app.server
 
+cursor = odbc_cursor()
+
 if __name__ == "__main__":
+    logging.info("Starting app...")
     app.run_server(host="0.0.0.0", port=8000, debug=(environment == "local"))

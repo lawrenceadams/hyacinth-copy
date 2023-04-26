@@ -4,6 +4,7 @@ import json
 from dash import dash_table as dtable, html
 from pathlib import Path
 import ids
+from pages.discharges.callbacks import get_discharges #noqa
 
 from pages.discharges import CAMPUSES
 
@@ -42,10 +43,11 @@ discharges_table = dmc.Paper(
         id="discharges_table",
         columns=[
             {"id": "ward", "name": "Ward"},
-            {"id": "full_name", "name": "Full Name"},
-            {"id": "age_sex", "name": "Age / Sex"},
+            {"id": "mrn", "name": "MRN"},
+            {"id": "fullname", "name": "Full Name"},
+            {"id": "sex", "name": "Age / Sex"},
             {"id": "news", "name": "NEWS"},
-            {"id": "admission_date", "name": "Admission Date"},
+            {"id": "admission_datetime", "name": "Admission Date"},
             {"id": "pred_discharge", "name": "Predicted Discharge"},
         ],
         style_table={"overflowX": "scroll"},
@@ -90,6 +92,8 @@ body = dmc.Container(
     [
         dmc.Grid(
             children=[
+                dmc.Col(campus_selector, span=3),
+                dmc.Col(dept_selector, span=3),
                 dmc.Col(discharges_table, span=12),
             ],
         ),
