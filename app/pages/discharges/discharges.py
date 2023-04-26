@@ -18,7 +18,7 @@ campus_selector = html.Div(
             value=[i.get("value") for i in CAMPUSES if i.get("label") == "UCH"][0],
             data=CAMPUSES,
             persistence=True,
-            persistence_type="local",
+            persistence_type="local"
         ),
     ]
 )
@@ -28,10 +28,7 @@ dept_selector = dmc.Container(
             placeholder="Select a ward",
             id="dept_selector",
             searchable=True,
-            nothingFound="No match found",
-            value="UCH T03 INTENSIVE CARE",
-            persistence=True,
-            persistence_type="local",
+            persistence=False,
         ),
     ],
     fluid=True,
@@ -92,8 +89,8 @@ body = dmc.Container(
     [
         dmc.Grid(
             children=[
-                dmc.Col(campus_selector, span=3),
-                dmc.Col(dept_selector, span=3),
+                dmc.Col(campus_selector, span=6),
+                dmc.Col(dept_selector, span=6),
                 dmc.Col(discharges_table, span=12),
             ],
         ),
