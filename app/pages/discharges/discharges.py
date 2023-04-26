@@ -39,10 +39,11 @@ discharges_table = dmc.Paper(
     dtable.DataTable(
         id="discharges_table",
         columns=[
-            {"id": "ward", "name": "Ward"},
+            {"id": "department", "name": "Ward"},
+            {"id": "room", "name": "Bed"},
             {"id": "mrn", "name": "MRN"},
             {"id": "fullname", "name": "Full Name"},
-            {"id": "sex", "name": "Age / Sex"},
+            {"id": "sex", "name": "Sex"},
             {"id": "news", "name": "NEWS"},
             {"id": "admission_datetime", "name": "Admission Date"},
             {"id": "pred_discharge", "name": "Predicted Discharge"},
