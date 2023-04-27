@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy:
-    uses: ./.github/workflows/slot_swap_reusable.yml
+    uses: ./.github/workflows/acr_deploy_reusable.yml
     name: Deploy app-dev
     with:
       environment: app-dev
