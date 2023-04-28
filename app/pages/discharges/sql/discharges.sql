@@ -1,72 +1,72 @@
 WITH loc AS (
     SELECT *,
-        row_number() OVER(
+        ROW_NUMBER() OVER(
             PARTITION BY csn,
             horizon_datetime
-            ORDER BY log_datetime desc
+            ORDER BY log_datetime DESC
         ) As log_number
     FROM [dbo].[location_v1]
 ),
 adm AS (
     SELECT *,
-        row_number() OVER(
+        ROW_NUMBER() OVER(
             PARTITION BY csn,
             horizon_datetime
-            ORDER BY log_datetime desc
+            ORDER BY log_datetime DESC
         ) AS log_number
     FROM [dbo].[admission_v1]
 ),
 dob AS (
     SELECT *,
-        row_number() OVER(
+        ROW_NUMBER() OVER(
             PARTITION BY csn,
             horizon_datetime
-            ORDER BY log_datetime desc
+            ORDER BY log_datetime DESC
         ) As log_number
     FROM [dbo].[date_of_birth_v1]
 ),
 mrn AS (
     SELECT *,
-        row_number() OVER(
+        ROW_NUMBER() OVER(
             PARTITION BY csn,
             horizon_datetime
-            ORDER BY log_datetime desc
+            ORDER BY log_datetime DESC
         ) AS log_number
     FROM [dbo].[mrn_v1]
 ),
 nom AS (
     SELECT *,
-        row_number() OVER(
+        ROW_NUMBER() OVER(
             PARTITION BY csn,
             horizon_datetime
-            ORDER BY log_datetime desc
+            ORDER BY log_datetime DESC
         ) AS log_number
     FROM [dbo].[name_v1]
 ),
 new AS (
     SELECT *,
-        row_number() OVER(
+        ROW_NUMBER() OVER(
             PARTITION BY csn,
             horizon_datetime
-            ORDER BY log_datetime desc
+            ORDER BY log_datetime DESC
         ) AS log_number
     FROM [dbo].[news2_average_last_24_hours_v1]
 ),
 sex AS(
     SELECT *,
-        row_number() OVER(
+        ROW_NUMBER() OVER(
             PARTITION BY csn,
             horizon_datetime
-            ORDER BY log_datetime desc
+            ORDER BY log_datetime DESC
         ) AS log_number
     FROM [dbo].[sex_v1]
 ),
 los AS (
     SELECT *,
-        row_number() OVER(
+        ROW_NUMBER() OVER(
             PARTITION BY csn,
             horizon_datetime
-            ORDER BY log_datetime desc
+            ORDER BY log_datetime DESC
         ) AS log_number
     FROM [dbo].[length_of_stay_v1]
 )
