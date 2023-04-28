@@ -1,29 +1,111 @@
-SELECT TOP 50 [mrn].[mrn],
-    [name].[fullname],
-    [sex].[sex],
-    [loc].[hl7_location]
-FROM (
-        SELECT TOP 50 fullname,
-            csn
-        FROM [dbo].[name_v1]
-    ) name
-    LEFT JOIN [dbo].[mrn_v1] mrn ON name.csn = mrn.csn
-    LEFT JOIN [dbo].[sex_v1] sex ON sex.csn = name.csn
-    LEFT JOIN [dbo].[location_v1] loc ON mrn.csn = loc.csn -- temporary so some data can come in 
-    -- SELECT [loc].hl7_location,
-    --     [mrn].[mrn],
-    --     [name].[fullname],
-    --     [sex].[sex],
-    --     [dob].[date_of_birth],
-    --     [dc].[admission_datetime],
-    --     [news].[value] news,
-    --     [los].[length_of_stay]
-    -- FROM [dbo].[admission_t03_v1] ad
-    --     LEFT JOIN [dbo].[mrn_v1] mrn ON ad.csn = mrn.csn
-    --     LEFT JOIN [dbo].[name_v1] name ON ad.csn = name.csn
-    --     LEFT JOIN [dbo].[discharge_t03_v1] dc ON ad.csn = dc.csn
-    --     LEFT JOIN [dbo].[date_of_birth_v1] dob on ad.csn = dob.csn
-    --     LEFT JOIN [dbo].[sex_v1] sex ON sex.csn = ad.csn
-    --     LEFT JOIN [dbo].[news2_average_last_24_hours_v1] news ON ad.csn = news.csn
-    --     LEFT JOIN [dbo].[location_v1] loc on ad.csn = loc.csn
-    --     LEFT JOIN [dbo].[length_of_stay_t03_v1] los ON ad.csn = los.csn
+WITH loc AS (
+    SELECT *,
+        row_number() OVER(
+            PARTITION BY csn,
+            horizon_datetime
+            ORDER BY log_datetime desc
+        ) As log_number
+    FROM [dbo].[location_v1]
+),
+adm AS (
+    SELECT *,
+        row_number() OVER(
+            PARTITION BY csn,
+            horizon_datetime
+            ORDER BY log_datetime desc
+        ) AS log_number
+    FROM [dbo].[admission_v1]
+),
+dob AS (
+    SELECT *,
+        row_number() OVER(
+            PARTITION BY csn,
+            horizon_datetime
+            ORDER BY log_datetime desc
+        ) As log_number
+    FROM [dbo].[date_of_birth_v1]
+),
+mrn AS (
+    SELECT *,
+        row_number() OVER(
+            PARTITION BY csn,
+            horizon_datetime
+            ORDER BY log_datetime desc
+        ) AS log_number
+    FROM [dbo].[mrn_v1]
+),
+nom AS (
+    SELECT *,
+        row_number() OVER(
+            PARTITION BY csn,
+            horizon_datetime
+            ORDER BY log_datetime desc
+        ) AS log_number
+    FROM [dbo].[name_v1]
+),
+new AS (
+    SELECT *,
+        row_number() OVER(
+            PARTITION BY csn,
+            horizon_datetime
+            ORDER BY log_datetime desc
+        ) AS log_number
+    FROM [dbo].[news2_average_last_24_hours_v1]
+),
+sex AS(
+    SELECT *,
+        row_number() OVER(
+            PARTITION BY csn,
+            horizon_datetime
+            ORDER BY log_datetime desc
+        ) AS log_number
+    FROM [dbo].[sex_v1]
+),
+los AS (
+    SELECT *,
+        row_number() OVER(
+            PARTITION BY csn,
+            horizon_datetime
+            ORDER BY log_datetime desc
+        ) AS log_number
+    FROM [dbo].[length_of_stay_v1]
+)
+SELECT loc.csn,
+    loc.horizon_datetime,
+    loc.hl7_location,
+    -- adm.department,
+    adm.admission_datetime,
+    dob.date_of_birth,
+    mrn.mrn,
+    nom.firstname,
+    nom.lastname,
+    sex.sex,
+    new.value as avg_news,
+    los.length_of_stay
+FROM loc
+    LEFT JOIN adm ON adm.csn = loc.csn
+    AND adm.horizon_datetime = loc.horizon_datetime
+    LEFT JOIN dob ON dob.csn = loc.csn
+    AND dob.horizon_datetime = loc.horizon_datetime
+    LEFT JOIN mrn ON mrn.csn = loc.csn
+    AND mrn.horizon_datetime = loc.horizon_datetime
+    LEFT JOIN nom ON nom.csn = loc.csn
+    AND nom.horizon_datetime = loc.horizon_datetime
+    LEFT JOIN new ON new.csn = loc.csn
+    AND new.horizon_datetime = loc.horizon_datetime
+    LEFT JOIN sex ON sex.csn = loc.csn
+    AND sex.horizon_datetime = loc.horizon_datetime
+    LEFT JOIN los ON los.csn = loc.csn
+    AND los.horizon_datetime = loc.horizon_datetime
+WHERE loc.horizon_datetime = (
+        SELECT MAX(horizon_datetime)
+        FROM loc
+    )
+    AND loc.log_number = 1
+    AND adm.log_number = 1
+    AND dob.log_number = 1
+    AND mrn.log_number = 1
+    AND nom.log_number = 1
+    AND new.log_number = 1
+    AND sex.log_number = 1
+    AND los.log_number = 1
