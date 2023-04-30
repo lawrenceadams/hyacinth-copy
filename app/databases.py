@@ -5,7 +5,8 @@ import logging
 
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
-    
+
+
 def odbc_cursor() -> Any:
     """
     ODBC cursor for running queries against the MSSQL feature store.
@@ -39,12 +40,62 @@ def cosmos_client() -> "CosmosClient":
 
     client = CosmosClient(
         os.environ["COSMOSDB_ENDPOINT"],
-        credential=(
-            DefaultAzureCredential()
-            if environment != "local"
-            else os.environ["COSMOSDB_KEY"]
-        ),
+        credential=(os.environ["COSMOSDB_KEY"]),
         connection_verify=(environment != "local"),
     )
     logging.info("Cosmos client created.")
     return client
+
+
+from azure.cosmos import CosmosClient
+from azure.core.exceptions import ResourceExistsError, CosmosResourceNotFoundError
+
+
+class CosmosDBLongCallbackManager:
+    def __init__(
+        self,
+        cosmos_client: CosmosClient,
+        database_name: str,
+        container_name: str,
+        expire: int,
+        partition_key: str = None,
+    ):
+        self.client = cosmos_client
+        self.database_name = database_name
+        self.container_name = container_name
+        self.expire = expire
+        self.partition_key = partition_key
+
+    def get_database_client(self):
+        return self.client.get_database_client(self.database_name)
+
+    def get_container_client(self):
+        return self.get_database_client().get_container_client(self.container_name)
+
+    def get(self, cache_key):
+        container = self.get_container_client()
+        try:
+            item = container.read_item(
+                item=cache_key, partition_key=self.partition_key or cache_key
+            )
+            return item.get("value")
+        except CosmosResourceNotFoundError:
+            return None
+
+    def set(self, value, cache_key):
+        container = self.get_container_client()
+        item = {"id": cache_key, "value": value, "expire": self.expire}
+        if self.partition_key:
+            item[self.partition_key] = self.partition_key
+        try:
+            container.upsert_item(item)
+        except ResourceExistsError:
+            container.replace_item(
+                item, item["id"], partition_key=self.partition_key or cache_key
+            )
+
+    def delete(self, cache_key):
+        container = self.get_container_client()
+        container.delete_item(
+            item=cache_key, partition_key=self.partition_key or cache_key
+        )

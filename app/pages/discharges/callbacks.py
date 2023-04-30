@@ -1,61 +1,69 @@
 import pandas as pd
-from databases import odbc_cursor, cosmos_client
-from dash import Input, Output, callback, DiskcacheManager
+from databases import odbc_cursor, cosmos_client, CosmosDBLongCallbackManager
+from dash import Input, Output, callback
 from pathlib import Path
 from pages.discharges import CAMPUSES
 from datetime import datetime, timedelta
-import os 
+import os
+from cachetools import TTLCache
 from uuid import uuid4
+import diskcache
 
-launch_uid = uuid4 
-auto_refresh_interval = 60*5 
-cache_database = "ToDoList"
-cache_container = "Items"
-container = (cosmos_client()
-             .get_database_client(cache_database)
-             .get_container_client(cache_container))
+launch_uid = uuid4
+auto_refresh_interval = 60 * 5
+cache_database = "hyacinth-state"
+cache_container = "hyacinth"
+partition_key = "/id"
 
 
-background_callback_manager = DiskcacheManager(
-    container,
-    cache_by=[lambda: uuid4().hex],
-    expire=auto_refresh_interval  # Cache expiration time in seconds
+cosmos_client_instance = cosmos_client()
+cosmosdb_callback_manager = CosmosDBLongCallbackManager(
+    cosmos_client_instance,
+    cache_database,
+    cache_container,
+    auto_refresh_interval,
+    partition_key,
 )
+
 
 @callback(
-        Output("discharges_table", "data"),
-        Output("last_updated_time", "children"),
-        Output("refresh_button", "loading"),
-        Input ("refresh_button", "n_clicks"),
+    Output("discharges_table", "data"),
+    Output("last_updated_time", "children"),
+    Output("refresh_button", "loading"),
+    Input("refresh_button", "n_clicks"),
 )
-def _get_discharges():
+def _get_discharges(n_clicks):
     print("getting discharges")
-    now=datetime.now()
-    cache_key= "discharges_cache"
-    cached_data = background_callback_manager.get(cache_key)
-    last_updated = background_callback_manager.get("last_updated")
+    now = datetime.now()
+    cache_key = "discharges_cache"
+    cached_data = cosmosdb_callback_manager.get(cache_key)
+    last_updated = cosmosdb_callback_manager.get("last_updated")
 
-
-    if cached_data and last_updated and (now - last_updated) < timedelta(seconds=auto_refresh_interval):
+    if (
+        cached_data
+        and last_updated
+        and (now - last_updated) < timedelta(seconds=auto_refresh_interval)
+    ):
         return cached_data, f"Last updated at {last_updated:%H:%M:%S}", False
-            
-    query =(Path(__file__).parent / "sql/discharges.sql").read_text()
+
+    query = (Path(__file__).parent / "sql/discharges.sql").read_text()
     data = pd.read_sql(query, odbc_cursor().connection)
     beds = pd.read_json("assets/locations/bed_defaults.json")
-    
-    df = (data.merge(beds[['location_string',
-                           'department','room',
-                           'location_name']],
-                      how="left",
-                      left_on="hl7_location", 
-                      right_on="location_string"))
- 
-        # .query("department == @dept_selector"))
- 
-    background_callback_manager.set(cache_key, df.to_dict('records'))
-    background_callback_manager.set("last_updated", now)
 
-    return df.to_dict('records'), f"Last updated at {last_updated:%H:%M:%S}", False
+    df = data.merge(
+        beds[["location_string", "department", "room", "location_name"]],
+        how="left",
+        left_on="hl7_location",
+        right_on="location_string",
+    )
+
+    # .query("department == @dept_selector"))
+
+    cosmosdb_callback_manager.set(cache_key, df.to_dict("records"))
+    cosmosdb_callback_manager.set("last_updated", now)
+
+    return df.to_dict("records"), f"Last updated at {last_updated:%H:%M:%S}", False
+
 
 # @callback(
 #     Output("dept_selector", "data"),

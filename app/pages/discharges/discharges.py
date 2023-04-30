@@ -5,7 +5,7 @@ from dash import dash_table as dtable, html
 from pathlib import Path
 import ids
 from dash_iconify import DashIconify
-# from pages.discharges.callbacks import _get_discharges, _get_wards #noqa
+from pages.discharges.callbacks import *
 
 from pages.discharges import CAMPUSES
 
@@ -37,7 +37,7 @@ dash.register_page(__name__, path="/discharges", name="Discharges")
 # )
 
 refresh_button = dmc.Button(
-    dmc.Text(id="last_updated_time", children='Not yet updated'),
+    dmc.Text(id="last_updated_time", children="Not yet updated"),
     id="refresh_button",
     leftIcon=DashIconify(icon="fluent:database-plug-connected-20-filled"),
     color="blue",

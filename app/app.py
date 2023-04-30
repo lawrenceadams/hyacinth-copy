@@ -47,8 +47,8 @@ app.config.suppress_callback_exceptions = True
 app.layout = create_appshell([page_registry.values()])
 
 server = app.server
+cosmos_client()
 
 if __name__ == "__main__":
     logging.info("Starting app...")
     app.run_server(host="0.0.0.0", port=8000, debug=(environment == "local"))
-
