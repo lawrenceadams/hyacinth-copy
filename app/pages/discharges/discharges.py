@@ -4,35 +4,43 @@ import json
 from dash import dash_table as dtable, html
 from pathlib import Path
 import ids
-from pages.discharges.callbacks import get_discharges #noqa
+from dash_iconify import DashIconify
+# from pages.discharges.callbacks import _get_discharges, _get_wards #noqa
 
 from pages.discharges import CAMPUSES
 
 
 dash.register_page(__name__, path="/discharges", name="Discharges")
 
-campus_selector = html.Div(
-    [
-        dmc.SegmentedControl(
-            id="campus_selector",
-            value=[i.get("value") for i in CAMPUSES if i.get("label") == "UCH"][0],
-            data=CAMPUSES,
-            persistence=True,
-            persistence_type="local"
-        ),
-    ]
-)
-dept_selector = dmc.Container(
-    [
-        dmc.Select(
-            placeholder="Select a ward",
-            id="dept_selector",
-            searchable=True,
-            persistence=False,
-        ),
-    ],
-    fluid=True,
-    p="xxs",
+# campus_selector = html.Div(
+#     [
+#         dmc.SegmentedControl(
+#             id="campus_selector",
+#             value=[i.get("value") for i in CAMPUSES if i.get("label") == "UCH"][0],
+#             data=CAMPUSES,
+#             persistence=True,
+#             persistence_type="local"
+#         ),
+#     ]
+# )
+# dept_selector = dmc.Container(
+#     [
+#         dmc.Select(
+#             placeholder="Select a ward",
+#             id="dept_selector",
+#             searchable=True,
+#             persistence=False,
+#         ),
+#     ],
+#     fluid=True,
+#     p="xxs",
+# )
+
+refresh_button = dmc.Button(
+    dmc.Text(id="last_updated_time", children='Not yet updated'),
+    id="refresh_button",
+    leftIcon=DashIconify(icon="fluent:database-plug-connected-20-filled"),
+    color="blue",
 )
 
 discharges_table = dmc.Paper(
@@ -91,8 +99,9 @@ body = dmc.Container(
     [
         dmc.Grid(
             children=[
-                dmc.Col(campus_selector, span=6),
-                dmc.Col(dept_selector, span=6),
+                # dmc.Col(campus_selector, span=3),
+                # dmc.Col(dept_selector, span=6),
+                dmc.Col(refresh_button, span=3),
                 dmc.Col(discharges_table, span=12),
             ],
         ),

@@ -5,8 +5,7 @@ import logging
 
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
-
-
+    
 def odbc_cursor() -> Any:
     """
     ODBC cursor for running queries against the MSSQL feature store.

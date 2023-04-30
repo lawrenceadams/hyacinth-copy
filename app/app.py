@@ -21,7 +21,7 @@ from databases import odbc_cursor, cosmos_client
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
 
-initialize_logging(environment, logging.INFO)
+initialize_logging(environment, logging.DEBUG)
 logging.info("Logging initialised.")
 
 app = Dash(
@@ -48,8 +48,7 @@ app.layout = create_appshell([page_registry.values()])
 
 server = app.server
 
-cursor = odbc_cursor()
-
 if __name__ == "__main__":
     logging.info("Starting app...")
     app.run_server(host="0.0.0.0", port=8000, debug=(environment == "local"))
+
