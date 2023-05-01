@@ -9,25 +9,19 @@ from cachetools import TTLCache
 from uuid import uuid4
 import diskcache
 from azure.cosmos import PartitionKey
+from ids import STORE_TIMER_5M
 
 launch_uid = uuid4
 auto_refresh_interval = 60 * 5
 
 cache_database = "hyacinth-state"
-
 cache_container = "hyacinth"
 partition_key = "/Id"
 
 client = cosmos_client()
 cosmos_db = client.get_database_client(cache_database)
 
-# last_updated = ""
-
 pk = PartitionKey(path="/Id")
-# container = cosmos_db.create_container(
-#     id=cache_container,
-#     partition_key=pk,
-# )
 
 cosmosdb_callback_manager = CosmosDBLongCallbackManager(
     client,
@@ -36,6 +30,22 @@ cosmosdb_callback_manager = CosmosDBLongCallbackManager(
     auto_refresh_interval,
     partition_key,
 )
+
+
+@callback(
+    Output("last_updated_time", "children"),
+    Input(STORE_TIMER_5M, "n_intervals"),
+)
+def update_last_updated(n_intervals):
+    last_updated = cosmosdb_callback_manager.get("last_updated")
+
+    if last_updated:
+        last_updated = datetime.fromisoformat(last_updated)
+        last_updated_str = f"Last updated at {last_updated:%H:%M:%S}"
+    else:
+        last_updated_str = "Last updated time not available"
+
+    return last_updated_str
 
 
 @callback(
@@ -65,23 +75,26 @@ def _get_discharges(n_clicks):
             else "Last updated time not available"
         )
         return cached_data, last_updated_str, False
+    if os.environ["ENVIRONMENT"] == "prod":
+        query = (Path(__file__).parent / "sql/discharges.sql").read_text()
+        data = pd.read_sql(query, odbc_cursor().connection)
+        beds = pd.read_json("assets/locations/bed_defaults.json")
 
-    query = (Path(__file__).parent / "sql/discharges.sql").read_text()
-    data = pd.read_sql(query, odbc_cursor().connection)
-    beds = pd.read_json("assets/locations/bed_defaults.json")
-
-    df = data.merge(
-        beds[["location_string", "department", "room", "location_name"]],
-        how="left",
-        left_on="hl7_location",
-        right_on="location_string",
-    )
+        df = data.merge(
+            beds[["location_string", "department", "room", "location_name"]],
+            how="left",
+            left_on="hl7_location",
+            right_on="location_string",
+        )
+    else:
+        query = (Path(__file__).parent / "sql/app-dev.sql").read_text()
+        df = pd.read_sql(query, odbc_cursor().connection)
+        df.columns = ["mrn", "firstname", "sex", "department"]
 
     # .query("department == @dept_selector"))
 
     cosmosdb_callback_manager.set(cache_key=cache_key, value=df.to_dict("records"))
-    cosmosdb_callback_manager.set(cache_key="last_updated", value=now)
-
+    cosmosdb_callback_manager.set(cache_key="last_updated", value=now.isoformat())
     last_updated_str = (
         f"Last updated at {last_updated:%H:%M:%S}"
         if last_updated
