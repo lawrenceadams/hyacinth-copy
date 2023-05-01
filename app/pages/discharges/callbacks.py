@@ -32,20 +32,20 @@ cosmosdb_callback_manager = CosmosDBLongCallbackManager(
 )
 
 
-@callback(
-    Output("last_updated_time", "children"),
-    Input(STORE_TIMER_5M, "n_intervals"),
-)
-def update_last_updated(n_intervals):
-    last_updated = cosmosdb_callback_manager.get("last_updated")
+# @callback(
+#     Output("last_updated_time", "children"),
+#     Input(STORE_TIMER_5M, "n_intervals"),
+# )
+# def update_last_updated(n_intervals):
+#     last_updated = cosmosdb_callback_manager.get("last_updated")
 
-    if last_updated:
-        last_updated = datetime.fromisoformat(last_updated)
-        last_updated_str = f"Last updated at {last_updated:%H:%M:%S}"
-    else:
-        last_updated_str = "Last updated time not available"
+#     if last_updated:
+#         last_updated = datetime.fromisoformat(last_updated)
+#         last_updated_str = f"Last updated at {last_updated:%H:%M:%S}"
+#     else:
+#         last_updated_str = "Last updated time not available"
 
-    return last_updated_str
+#     return last_updated_str
 
 
 @callback(

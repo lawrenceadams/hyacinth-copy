@@ -1,9 +1,9 @@
 SELECT TOP 50 [mrn].[mrn],
-    [name].[fullname],
+    [name].[firstname],
     [sex].[sex],
     [loc].[hl7_location]
 FROM (
-        SELECT TOP 50 fullname,
+        SELECT TOP 50 firstname,
             csn
         FROM [dbo].[name_v1]
     ) name
