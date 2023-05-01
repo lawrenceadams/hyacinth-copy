@@ -5,6 +5,7 @@ from dash import dash_table as dtable, html
 from pathlib import Path
 import ids
 from dash_iconify import DashIconify
+
 from pages.discharges.callbacks import *
 
 from pages.discharges import CAMPUSES

@@ -2,6 +2,7 @@ import os
 from typing import Any
 from dev import db_aad_token_struct
 import logging
+from datetime import datetime
 
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
@@ -48,7 +49,7 @@ def cosmos_client() -> "CosmosClient":
 
 
 from azure.cosmos import CosmosClient
-from azure.core.exceptions import ResourceExistsError, CosmosResourceNotFoundError
+from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 
 
 class CosmosDBLongCallbackManager:
@@ -79,11 +80,13 @@ class CosmosDBLongCallbackManager:
                 item=cache_key, partition_key=self.partition_key or cache_key
             )
             return item.get("value")
-        except CosmosResourceNotFoundError:
+        except ResourceNotFoundError:
             return None
 
     def set(self, value, cache_key):
         container = self.get_container_client()
+        if isinstance(value, datetime):
+            value = value.isoformat()
         item = {"id": cache_key, "value": value, "expire": self.expire}
         if self.partition_key:
             item[self.partition_key] = self.partition_key

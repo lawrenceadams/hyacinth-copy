@@ -8,17 +8,29 @@ import os
 from cachetools import TTLCache
 from uuid import uuid4
 import diskcache
+from azure.cosmos import PartitionKey
 
 launch_uid = uuid4
 auto_refresh_interval = 60 * 5
+
 cache_database = "hyacinth-state"
+
 cache_container = "hyacinth"
-partition_key = "/id"
+partition_key = "/Id"
 
+client = cosmos_client()
+cosmos_db = client.get_database_client(cache_database)
 
-cosmos_client_instance = cosmos_client()
+# last_updated = ""
+
+pk = PartitionKey(path="/Id")
+# container = cosmos_db.create_container(
+#     id=cache_container,
+#     partition_key=pk,
+# )
+
 cosmosdb_callback_manager = CosmosDBLongCallbackManager(
-    cosmos_client_instance,
+    client,
     cache_database,
     cache_container,
     auto_refresh_interval,
@@ -39,12 +51,20 @@ def _get_discharges(n_clicks):
     cached_data = cosmosdb_callback_manager.get(cache_key)
     last_updated = cosmosdb_callback_manager.get("last_updated")
 
+    if last_updated:
+        last_updated = datetime.fromisoformat(last_updated)
+
     if (
         cached_data
         and last_updated
         and (now - last_updated) < timedelta(seconds=auto_refresh_interval)
     ):
-        return cached_data, f"Last updated at {last_updated:%H:%M:%S}", False
+        last_updated_str = (
+            f"Last updated at {last_updated:%H:%M:%S}"
+            if last_updated
+            else "Last updated time not available"
+        )
+        return cached_data, last_updated_str, False
 
     query = (Path(__file__).parent / "sql/discharges.sql").read_text()
     data = pd.read_sql(query, odbc_cursor().connection)
@@ -59,10 +79,16 @@ def _get_discharges(n_clicks):
 
     # .query("department == @dept_selector"))
 
-    cosmosdb_callback_manager.set(cache_key, df.to_dict("records"))
-    cosmosdb_callback_manager.set("last_updated", now)
+    cosmosdb_callback_manager.set(cache_key=cache_key, value=df.to_dict("records"))
+    cosmosdb_callback_manager.set(cache_key="last_updated", value=now)
 
-    return df.to_dict("records"), f"Last updated at {last_updated:%H:%M:%S}", False
+    last_updated_str = (
+        f"Last updated at {last_updated:%H:%M:%S}"
+        if last_updated
+        else "Last updated time not available"
+    )
+
+    return df.to_dict("records"), last_updated_str, False
 
 
 # @callback(
