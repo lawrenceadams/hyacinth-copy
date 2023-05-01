@@ -1,8 +1,13 @@
 import os
+import logging
+import pyodbc
 from typing import Any
 from dev import db_aad_token_struct
-import logging
 from datetime import datetime
+from azure.cosmos import CosmosClient
+from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.cosmos import CosmosClient
+from azure.identity import DefaultAzureCredential
 
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
@@ -14,7 +19,6 @@ def odbc_cursor() -> Any:
 
     Documentation: https://github.com/mkleehammer/pyodbc/wiki
     """
-    import pyodbc
 
     connection_string = os.environ["FEATURE_STORE_CONNECTION_STRING"]
 
@@ -36,8 +40,6 @@ def cosmos_client() -> "CosmosClient":
 
     Documentation: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/sdk-python
     """
-    from azure.cosmos import CosmosClient
-    from azure.identity import DefaultAzureCredential
 
     client = CosmosClient(
         os.environ["COSMOSDB_ENDPOINT"],
@@ -50,10 +52,6 @@ def cosmos_client() -> "CosmosClient":
     )
     logging.info("Cosmos client created.")
     return client
-
-
-from azure.cosmos import CosmosClient
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 
 
 class CosmosDBLongCallbackManager:
@@ -89,13 +87,16 @@ class CosmosDBLongCallbackManager:
 
     def set(self, value, cache_key):
         container = self.get_container_client()
+
         if isinstance(value, datetime):
             value = value.isoformat()
         item = {"id": cache_key, "value": value, "expire": self.expire}
-        if self.partition_key:
+
+        if self.partition_key is not None:
             item[self.partition_key] = self.partition_key
         try:
             container.upsert_item(item)
+
         except ResourceExistsError:
             container.replace_item(
                 item, item["id"], partition_key=self.partition_key or cache_key

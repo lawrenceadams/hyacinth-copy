@@ -22,7 +22,7 @@ from azure.cosmos import CosmosClient
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
 
-initialize_logging(environment, logging.DEBUG)
+initialize_logging(environment, logging.INFO)
 logging.info("Logging initialised.")
 
 app = Dash(

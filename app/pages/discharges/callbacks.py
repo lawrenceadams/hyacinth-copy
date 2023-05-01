@@ -25,7 +25,6 @@ cosmosdb_callback_manager = CosmosDBLongCallbackManager(
 )
 
 
-# Fetch discharges data based on environment
 def _fetch_discharges():
     logging.info("Fetching discharges from SQL store")
     if os.environ["ENVIRONMENT"] == "prod":
@@ -44,58 +43,43 @@ def _fetch_discharges():
     return df
 
 
-# Callback function to get discharges data
+# @callback(
+#     Output("update_button", "loading", allow_duplicate=True),
+#     Input("update_button", "n_clicks"),
+#     prevent_initial_call="initial_duplicate",
+# )
+# def _make_button_load(n_clicks):
+#     return True
+
+
 @callback(
     Output("discharges_table", "data"),
-    Output("refresh_button", "children"),
-    Output("refresh_button", "loading"),
-    Input("refresh_button", "n_clicks"),
+    Output("update_button", "children"),
+    Input("update_button", "n_clicks"),
     Input(STORE_TIMER_5M, "n_intervals"),
 )
 def _get_discharges(n_clicks, n_intervals):
-    nc = 0
     now = datetime.now()
+    last_updated = cosmosdb_callback_manager.get("last_updated")
+    cached_data = cosmosdb_callback_manager.get("discharges_cache")
 
-    # Manual refresh triggered
-    if n_clicks and n_clicks > nc:
-        logging.info("Manual refresh triggered...")
-
-        df = _fetch_discharges()
-        nc = n_clicks
-
-        logging.info("Refreshing cached data...")
-        cosmosdb_callback_manager.set(
-            cache_key="discharges_cache", value=df.to_dict("records")
+    if cached_data:
+        logging.info("Retrieved cached data.")
+        df = cached_data
+        return (
+            cached_data,
+            f"Retrieved from Cache. ",  # Last updated at {last_updated:%H:%M:%S}",
         )
 
-        cosmosdb_callback_manager.set(cache_key="last_updated", value=now)
-        return df.to_dict("records"), f"Updated manually at {now:%H:%M:%S}", True
-
-    logging.info("Retrieving cached data...")
-    cached_data = cosmosdb_callback_manager.get("discharges_cache")
-    last_updated = cosmosdb_callback_manager.get("last_updated")
-
-    if last_updated:
-        logging.info("Retrieved cached data.")
-        last_updated = datetime.fromisoformat(last_updated)
-
-    time_since_last_update = now - last_updated if last_updated else None
-
-    # If data is already cached and within the refresh interval
-    if (
-        cached_data
-        and last_updated
-        and time_since_last_update < timedelta(seconds=AUTO_REFRESH_INTERVAL)
-        # ^^ should not be needed as expiry on cache
-    ):
-        return cached_data, f"Last updated at {last_updated:%H:%M:%S}", False
-
-    # Refresh data and update cache
-    df = _fetch_discharges()
     logging.info("Refreshing cached data")
+    df = _fetch_discharges()
+    last_updated = now
+
     cosmosdb_callback_manager.set(
         cache_key="discharges_cache", value=df.to_dict("records")
     )
     cosmosdb_callback_manager.set(cache_key="last_updated", value=now)
-
-    return df.to_dict("records"), f"Last updated at {last_updated:%H:%M:%S}", False
+    return (
+        df.to_dict("records"),
+        f"Retrieved from Feature Store. Last updated at {last_updated:%H:%M:%S}",
+    )

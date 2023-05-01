@@ -37,10 +37,9 @@ dash.register_page(__name__, path="/discharges", name="Discharges")
 #     p="xxs",
 # )
 
-refresh_button = dmc.Button(
-    dmc.Text(id="last_updated_time", children="Not yet updated"),
-    id="refresh_button",
-    leftIcon=DashIconify(icon="fluent:database-plug-connected-20-filled"),
+updated_time = dmc.Button(
+    id="update_button",
+    children="Not updated yet",
     color="blue",
 )
 
@@ -102,7 +101,7 @@ body = dmc.Container(
             children=[
                 # dmc.Col(campus_selector, span=3),
                 # dmc.Col(dept_selector, span=6),
-                dmc.Col(refresh_button, span=3),
+                dmc.Col(updated_time, span=6),
                 dmc.Col(discharges_table, span=12),
             ],
         ),
