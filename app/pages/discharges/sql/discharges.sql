@@ -97,10 +97,7 @@ FROM loc
     AND sex.horizon_datetime = loc.horizon_datetime
     LEFT JOIN los ON los.csn = loc.csn
     AND los.horizon_datetime = loc.horizon_datetime
-WHERE loc.horizon_datetime = (
-        SELECT MAX(horizon_datetime)
-        FROM loc
-    )
+WHERE loc.horizon_datetime = '2023-04-01 00:00:00.000'
     AND loc.log_number = 1
     AND adm.log_number = 1
     AND dob.log_number = 1
