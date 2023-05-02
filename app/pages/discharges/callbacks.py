@@ -10,6 +10,7 @@ from databases import odbc_cursor, cosmos_client, CosmosDBLongCallbackManager
 from ids import STORE_TIMER_5M
 
 AUTO_REFRESH_INTERVAL = 60 * 5
+ENVIRONMENT = os.environ.get("ENVIRONMENT", default="dev")
 
 # Read SQL queries
 DISCHARGES_QUERY = (Path(__file__).parent / "sql/discharges.sql").read_text()
@@ -27,7 +28,11 @@ cosmosdb_callback_manager = CosmosDBLongCallbackManager(
 
 def _fetch_discharges():
     logging.info("Fetching discharges from SQL store")
-    if os.environ.get("ENVIRONMENT") == "prod":
+
+    if ENVIRONMENT != "prod":
+        df = pd.read_sql(DEV_QUERY, odbc_cursor().connection)
+        df.columns = ["mrn", "firstname", "sex", "department"]
+    else:
         data = pd.read_sql(DISCHARGES_QUERY, odbc_cursor().connection)
         beds = pd.read_json("assets/locations/bed_defaults.json")
         df = data.merge(
@@ -36,9 +41,6 @@ def _fetch_discharges():
             left_on="hl7_location",
             right_on="location_string",
         )
-    else:
-        df = pd.read_sql(DEV_QUERY, odbc_cursor().connection)
-        df.columns = ["mrn", "firstname", "sex", "department"]
     logging.info(f"Fetched {len(df)} rows from SQL store")
     return df
 

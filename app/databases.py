@@ -9,7 +9,6 @@ from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential
 
-
 environment = os.environ.get("ENVIRONMENT", default="dev")
 
 
@@ -123,13 +122,7 @@ class CosmosDBLongCallbackManager:
         items = list(container.query_items(query, enable_cross_partition_query=True))
 
         if items:
-            if items:
-                existing_item = items[0]
-                container.replace_item(
-                    item=existing_item,
-                    new_item=item,
-                    partition_key=item["id"],
-                )
+            container.upsert_item(item)
 
         else:
             container.create_item(item)
