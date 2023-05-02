@@ -2,7 +2,7 @@ import os
 import logging
 import pandas as pd
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from dash import Input, Output, callback
 
@@ -27,7 +27,7 @@ cosmosdb_callback_manager = CosmosDBLongCallbackManager(
 
 def _fetch_discharges():
     logging.info("Fetching discharges from SQL store")
-    if os.environ["ENVIRONMENT"] == "prod":
+    if os.environ.get("ENVIRONMENT") == "prod":
         data = pd.read_sql(DISCHARGES_QUERY, odbc_cursor().connection)
         beds = pd.read_json("assets/locations/bed_defaults.json")
         df = data.merge(
@@ -59,8 +59,8 @@ def _fetch_discharges():
     Input(STORE_TIMER_5M, "n_intervals"),
 )
 def _get_discharges(n_clicks, n_intervals):
-    now = datetime.now()
-    last_updated = cosmosdb_callback_manager.get("last_updated")
+    now = datetime.now(timezone.utc)
+    #  last_updated = cosmosdb_callback_manager.get("last_updated")
     cached_data = cosmosdb_callback_manager.get("discharges_cache")
 
     if cached_data:
@@ -78,7 +78,7 @@ def _get_discharges(n_clicks, n_intervals):
     cosmosdb_callback_manager.set(
         cache_key="discharges_cache", value=df.to_dict("records")
     )
-    cosmosdb_callback_manager.set(cache_key="last_updated", value=now)
+    # cosmosdb_callback_manager.set(cache_key="last_updated", value=now)
     return (
         df.to_dict("records"),
         f"Retrieved from Feature Store. Last updated at {last_updated:%H:%M:%S}",

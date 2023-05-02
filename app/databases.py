@@ -3,7 +3,7 @@ import logging
 import pyodbc
 from typing import Any
 from dev import db_aad_token_struct
-from datetime import datetime
+from datetime import datetime, timezone
 from azure.cosmos import CosmosClient
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.cosmos import CosmosClient
@@ -61,13 +61,27 @@ class CosmosDBLongCallbackManager:
         database_name: str,
         container_name: str,
         expire: int,
-        partition_key: str = None,
+        partition_key: str = "/Id",
     ):
         self.client = cosmos_client
         self.database_name = database_name
         self.container_name = container_name
         self.expire = expire
         self.partition_key = partition_key
+
+    def is_expired(self, item):
+        if not item or "timestamp" not in item or "expire" not in item:
+            return True
+        timestamp = datetime.fromisoformat(item["timestamp"])
+        expire_seconds = item["expire"]
+        now = datetime.now(timezone.utc)
+        seconds_since_timestamp = (now - timestamp).total_seconds()
+        if seconds_since_timestamp > expire_seconds:
+            logging.info(
+                f"Now:{now}. timestamp: {timestamp}. seconds_since_stimestamp: {seconds_since_timestamp}"
+            )
+            return True
+        return False
 
     def get_database_client(self):
         return self.client.get_database_client(self.database_name)
@@ -77,33 +91,45 @@ class CosmosDBLongCallbackManager:
 
     def get(self, cache_key):
         container = self.get_container_client()
-        try:
-            item = container.read_item(
-                item=cache_key, partition_key=self.partition_key or cache_key
-            )
-            return item.get("value")
-        except ResourceNotFoundError:
+        query = f'SELECT * FROM c WHERE c.id = "{cache_key}"'
+        items = list(container.query_items(query, enable_cross_partition_query=True))
+
+        if not items:
             return None
+
+        item = items[0]
+
+        if self.is_expired(item):
+            return None
+
+        else:
+            return item.get("value")
 
     def set(self, value, cache_key):
         container = self.get_container_client()
-
         if isinstance(value, datetime):
             value = value.isoformat()
-        item = {"id": cache_key, "value": value, "expire": self.expire}
+        item = {
+            "id": cache_key,
+            "value": value,
+            "expire": self.expire,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
         if self.partition_key is not None:
             item[self.partition_key] = self.partition_key
-        try:
-            container.upsert_item(item)
 
-        except ResourceExistsError:
-            container.replace_item(
-                item, item["id"], partition_key=self.partition_key or cache_key
-            )
+        query = f'SELECT * FROM c WHERE c.id = "{cache_key}"'
+        items = list(container.query_items(query, enable_cross_partition_query=True))
 
-    def delete(self, cache_key):
-        container = self.get_container_client()
-        container.delete_item(
-            item=cache_key, partition_key=self.partition_key or cache_key
-        )
+        if items:
+            if items:
+                existing_item = items[0]
+                container.replace_item(
+                    item=existing_item,
+                    new_item=item,
+                    partition_key=item["id"],
+                )
+
+        else:
+            container.create_item(item)
