@@ -2,14 +2,28 @@ import os
 import logging
 import pyodbc
 from typing import Any
-from dev import db_aad_token_struct
 from datetime import datetime, timezone
 from azure.cosmos import CosmosClient
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential
+import struct 
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
+
+
+def db_aad_token_struct() -> bytes:
+    """
+    Uses AzureCli login state to get a token for the database scope
+
+    Kindly leveraged from this SO answer: https://stackoverflow.com/a/67692382
+    """
+    credential = DefaultAzureCredential()
+    token = credential.get_token("https://database.windows.net/")[0]
+
+    token_bytes = bytes(token, "UTF-16 LE")
+
+    logging.info("AAD token generated.")
+
+    return struct.pack("=i", len(token_bytes)) + token_bytes
 
 
 def odbc_cursor() -> Any:
@@ -68,9 +82,9 @@ class CosmosDBLongCallbackManager:
         self.expire = expire
         self.partition_key = partition_key
     
-        self.create_container()
+        self.create_container_if_not_exists()
     
-    def create_container(self):
+    def create_container_if_not_exists(self):
         container_list = list(self.get_database_client().list_containers())
         container_names = [container['id'] for container in container_list]
         if self.container_name not in container_names:
