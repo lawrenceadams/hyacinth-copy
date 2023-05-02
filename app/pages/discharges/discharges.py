@@ -41,13 +41,13 @@ updated_time = dmc.Button(
     id="update_button",
     children="Not updated yet",
     color="blue",
+    fullWidth=True
 )
 
 loading_overlay = dmc.LoadingOverlay(
     id="loading_overlay",
     children=updated_time
 )
-
 
 discharges_table = dmc.Paper(
     dtable.DataTable(
@@ -64,7 +64,7 @@ discharges_table = dmc.Paper(
             {"id": "length_of_stay", "name": "Length of Stay"},
         ],
         style_table={"overflowX": "scroll"},
-        style_as_list_view=True,  # remove col lines
+        style_as_list_view=True,  
         style_cell={
             "fontSize": 11,
             "padding": "5px",
@@ -82,24 +82,6 @@ discharges_table = dmc.Paper(
     p="md",  # padding
     withBorder=True,
 )
-
-
-debug_inspector = dmc.Container(
-    [
-        dmc.Spoiler(
-            children=[
-                dmc.Prism(
-                    language="json",
-                    # id=ids.DEBUG_NODE_INSPECTOR_WARD, children=""
-                )
-            ],
-            showLabel="Show more",
-            hideLabel="Hide",
-            maxHeight=100,
-        )
-    ]
-)
-
 
 body = dmc.Container(
     [
@@ -119,6 +101,5 @@ def layout() -> dash.html.Div:
     return html.Div(
         children=[
             body,
-            # debug_inspector,
         ]
     )
