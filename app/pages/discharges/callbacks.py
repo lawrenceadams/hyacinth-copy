@@ -52,8 +52,6 @@ def _reload(n_clicks):
     return no_update
 
 
-
-
 @callback(
     Output("discharges_table", "data"),
     Output("update_button", "children"),
