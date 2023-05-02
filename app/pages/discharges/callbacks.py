@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
-from dash import Input, Output, callback
+from dash import Input, Output, callback, no_update
 
 from databases import odbc_cursor, cosmos_client, CosmosDBLongCallbackManager
 from ids import STORE_TIMER_5M
@@ -44,14 +44,14 @@ def _fetch_discharges():
     logging.info(f"Fetched {len(df)} rows from SQL store")
     return df
 
+@callback(
+        Output("loading_overlay", "children"),
+        Input("update_button", "n_clicks")
+)
+def _reload(n_clicks):
+    return no_update
 
-# @callback(
-#     Output("update_button", "loading", allow_duplicate=True),
-#     Input("update_button", "n_clicks"),
-#     prevent_initial_call="initial_duplicate",
-# )
-# def _make_button_load(n_clicks):
-#     return True
+
 
 
 @callback(
@@ -70,7 +70,7 @@ def _get_discharges(n_clicks, n_intervals):
         df = cached_data
         return (
             cached_data,
-            f"Retrieved from Cache. ",  # Last updated at {last_updated:%H:%M:%S}",
+            f"Retrieved from Cache at {now:%H:%M:%S}",  # Last updated at {last_updated:%H:%M:%S}",
         )
 
     logging.info("Refreshing cached data")
@@ -85,3 +85,4 @@ def _get_discharges(n_clicks, n_intervals):
         df.to_dict("records"),
         f"Retrieved from Feature Store. Last updated at {last_updated:%H:%M:%S}",
     )
+

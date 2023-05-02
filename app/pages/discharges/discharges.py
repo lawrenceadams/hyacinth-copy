@@ -43,6 +43,12 @@ updated_time = dmc.Button(
     color="blue",
 )
 
+loading_overlay = dmc.LoadingOverlay(
+    id="loading_overlay",
+    children=updated_time
+)
+
+
 discharges_table = dmc.Paper(
     dtable.DataTable(
         id="discharges_table",
@@ -99,9 +105,7 @@ body = dmc.Container(
     [
         dmc.Grid(
             children=[
-                # dmc.Col(campus_selector, span=3),
-                # dmc.Col(dept_selector, span=6),
-                dmc.Col(updated_time, span=6),
+                dmc.Col(loading_overlay, span=6),
                 dmc.Col(discharges_table, span=12),
             ],
         ),
