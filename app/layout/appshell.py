@@ -26,9 +26,9 @@ def create_appshell(nav_data: list | dict) -> dmc.MantineProvider:
                     interval=60 * 60 * 1000,
                 ),
                 dcc.Interval(
-                    id=ids.STORE_TIMER_6H,
+                    id=ids.STORE_TIMER_5M,
                     n_intervals=0,
-                    interval=6 * 60 * 60 * 1000,
+                    interval=60 * 5 * 1000,
                 ),
                 dcc.Location(id="url"),
                 dmc.NotificationsProvider(
