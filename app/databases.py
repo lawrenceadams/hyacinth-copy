@@ -55,7 +55,7 @@ def cosmos_client() -> "CosmosClient":
     """
 
     client = CosmosClient(
-        os.environ["COSMOSDB_ENDPOINT"],
+        os.environ["COSMOS_STATE_STORE_ENDPOINT"],
         credential=(
             DefaultAzureCredential()
             if environment != "local"

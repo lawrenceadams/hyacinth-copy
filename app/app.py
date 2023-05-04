@@ -48,9 +48,6 @@ app.config.suppress_callback_exceptions = True
 app.layout = create_appshell([page_registry.values()])
 
 server = app.server
-# client = CosmosClient(
-#     url=os.environ["COSMOSDB_ENDPOINT"], credential=os.environ["COSMOSDB_KEY"]
-# )
 
 if __name__ == "__main__":
     logging.info("Starting app...")
