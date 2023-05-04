@@ -4,54 +4,67 @@ import json
 from dash import dash_table as dtable, html
 from pathlib import Path
 import ids
-from pages.discharges.callbacks import get_discharges #noqa
+from dash_iconify import DashIconify
+
+from pages.discharges.callbacks import *
 
 from pages.discharges import CAMPUSES
 
 
 dash.register_page(__name__, path="/discharges", name="Discharges")
 
-campus_selector = html.Div(
-    [
-        dmc.SegmentedControl(
-            id="campus_selector",
-            value=[i.get("value") for i in CAMPUSES if i.get("label") == "UCH"][0],
-            data=CAMPUSES,
-            persistence=True,
-            persistence_type="local",
-        ),
-    ]
+# campus_selector = html.Div(
+#     [
+#         dmc.SegmentedControl(
+#             id="campus_selector",
+#             value=[i.get("value") for i in CAMPUSES if i.get("label") == "UCH"][0],
+#             data=CAMPUSES,
+#             persistence=True,
+#             persistence_type="local"
+#         ),
+#     ]
+# )
+# dept_selector = dmc.Container(
+#     [
+#         dmc.Select(
+#             placeholder="Select a ward",
+#             id="dept_selector",
+#             searchable=True,
+#             persistence=False,
+#         ),
+#     ],
+#     fluid=True,
+#     p="xxs",
+# )
+
+updated_time = dmc.Button(
+    id="update_button",
+    children="Not updated yet",
+    color="blue",
+    fullWidth=True
 )
-dept_selector = dmc.Container(
-    [
-        dmc.Select(
-            placeholder="Select a ward",
-            id="dept_selector",
-            searchable=True,
-            nothingFound="No match found",
-            value="UCH T03 INTENSIVE CARE",
-            persistence=True,
-            persistence_type="local",
-        ),
-    ],
-    fluid=True,
-    p="xxs",
+
+loading_overlay = dmc.LoadingOverlay(
+    id="loading_overlay",
+    children=updated_time
 )
 
 discharges_table = dmc.Paper(
     dtable.DataTable(
         id="discharges_table",
         columns=[
-            {"id": "ward", "name": "Ward"},
+            {"id": "department", "name": "Ward"},
+            {"id": "room", "name": "Bed"},
             {"id": "mrn", "name": "MRN"},
-            {"id": "fullname", "name": "Full Name"},
-            {"id": "sex", "name": "Age / Sex"},
-            {"id": "news", "name": "NEWS"},
+            {"id": "firstname", "name": "First Name"},
+            {"id": "lastname", "name": "Last Name"},
+            {"id": "sex", "name": "Sex"},
+            {"id": "avg_news", "name": "NEWS"},
             {"id": "admission_datetime", "name": "Admission Date"},
-            {"id": "pred_discharge", "name": "Predicted Discharge"},
+            {"id": "length_of_stay", "name": "Length of Stay"},
         ],
         style_table={"overflowX": "scroll"},
-        style_as_list_view=True,  # remove col lines
+        style_as_list_view=True,  
         style_cell={
             "fontSize": 11,
             "padding": "5px",
@@ -70,30 +83,11 @@ discharges_table = dmc.Paper(
     withBorder=True,
 )
 
-
-debug_inspector = dmc.Container(
-    [
-        dmc.Spoiler(
-            children=[
-                dmc.Prism(
-                    language="json",
-                    # id=ids.DEBUG_NODE_INSPECTOR_WARD, children=""
-                )
-            ],
-            showLabel="Show more",
-            hideLabel="Hide",
-            maxHeight=100,
-        )
-    ]
-)
-
-
 body = dmc.Container(
     [
         dmc.Grid(
             children=[
-                dmc.Col(campus_selector, span=3),
-                dmc.Col(dept_selector, span=3),
+                dmc.Col(loading_overlay, span=6),
                 dmc.Col(discharges_table, span=12),
             ],
         ),
@@ -107,6 +101,5 @@ def layout() -> dash.html.Div:
     return html.Div(
         children=[
             body,
-            # debug_inspector,
         ]
     )
