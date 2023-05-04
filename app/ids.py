@@ -7,6 +7,7 @@ def gen_id(name: str, dunder_name: str) -> str:
     return f"{module_name}-{name}"
 
 
+STORE_TIMER_5M = gen_id("5m timer", __name__)
 STORE_TIMER_1H = gen_id("1h timer", __name__)
 STORE_TIMER_6H = gen_id("6h timer", __name__)
 DEPT_STORE = gen_id("dept all store", __name__)
