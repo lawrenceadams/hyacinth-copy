@@ -17,7 +17,7 @@ import os
 from azure_logging import initialize_logging
 from dash import Dash, page_registry
 from layout.appshell import create_appshell
-from azure_log_exporter import setup_azurelog_exporter
+# from azure_log_exporter import setup_azurelog_exporter
 
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
@@ -45,7 +45,7 @@ app = Dash(
     ],
 )
 
-setup_azurelog_exporter(environment, app.server, instrumentation_key)
+# setup_azurelog_exporter(environment, app.server, instrumentation_key)
 
 
 app.config.suppress_callback_exceptions = True
