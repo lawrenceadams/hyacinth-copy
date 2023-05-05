@@ -32,7 +32,7 @@ discharges_table = dmc.Paper(
             {"id": "avg_news", "name": "NEWS"},
             {"id": "admission_datetime", "name": "Admission Date"},
             {"id": "length_of_stay", "name": "Length of Stay"},
-            {"id": "predictions", "name": "Predictions"},
+            {"id": "prediction", "name": "Predictions"},
         ],
         style_table={"overflowX": "scroll"},
         style_as_list_view=True,
