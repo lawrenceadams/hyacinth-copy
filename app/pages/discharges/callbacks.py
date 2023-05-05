@@ -30,16 +30,24 @@ cosmos = cosmos_client()
 #     return predictions
 
 def _fetch_prediction(app_to_call_id, payload):
-    pred = call_model(app_to_call_id, payload)
-    if "outputs" in pred:
-        return pred["outputs"][0]
-    else:
-        return None
+    try:
+        pred = call_model(app_to_call_id, payload)
+        if "outputs" in pred:
+            return pred["outputs"][0]
+    except Exception:
+        pass 
+    return None
+
 
 def _fetch_predictions(patients):
     logging.info("Fetching predictions")
-    predictions = [_fetch_prediction("los-predictor", f'{{"csn": {patient["mrn"]}}}') for patient in patients]
+    predictions = []
+    for patient in patients:
+        pred = _fetch_prediction("los-predictor", f'{{"csn": {patient["mrn"]}}}')
+        if pred is not None:
+            predictions.append(pred)
     return predictions
+
 
 if cosmos:
     cosmosdb_callback_manager = CosmosDBLongCallbackManager(
