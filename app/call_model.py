@@ -13,11 +13,11 @@
 #  limitations under the License.
 
 import os
+import logging 
 from azure.identity import DefaultAzureCredential
 import requests
 import adal
 from azure.keyvault.secrets import SecretClient
-
 
 def call_model(app_to_call_id, payload):
     """
@@ -26,11 +26,10 @@ def call_model(app_to_call_id, payload):
     """
 
     environment = os.environ["ENVIRONMENT"]
-    
+    tenant_id = os.environ["TENANT_ID"]
+
     if environment == 'prod' or environment=='app-dev' :
-        tenant_id = os.environ["TENANT_ID"]
         key_vault_uri = os.environ["KEY_VAULT_URI"]
-        environment = os.environ["ENVIRONMENT"]
 
         app_uri = f"webapp-{app_to_call_id}-uclh-flowehr-{environment}"
         app_id_key = f"{app_uri}-client-id"
@@ -63,5 +62,7 @@ def call_model(app_to_call_id, payload):
     response = requests.post(
         url=f"https://{app_uri}.azurewebsites.net/run", headers=headers, data=payload
     )
+
+    logging.debug("Predicted!")
 
     return response.json()

@@ -1,9 +1,9 @@
 import os
 import logging
-import asyncio
+# import asyncio
 import pandas as pd
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from dash import Input, Output, callback, no_update
 
 from databases import odbc_cursor, cosmos_client, CosmosDBLongCallbackManager
@@ -18,14 +18,22 @@ DEV_QUERY = (Path(__file__).parent / "sql/app-dev.sql").read_text()
 cosmos = cosmos_client()
 
 
-async def fetch_prediction(app_to_call_id, payload):
-    return await asyncio.to_thread(call_model, app_to_call_id, payload)
+# async def _async_fetch_prediction(app_to_call_id, payload):
+#     return await asyncio.to_thread(call_model, app_to_call_id, payload)
 
-async def fetch_predictions(patients):
+# async def _async_fetch_predictions(patients):
+#     logging.info("Fetching predictions")
+#     predictions = await asyncio.gather(
+#         *[_async_fetch_prediction("los-predictor", f'{{"csn": {patient["mrn"]}}}') for patient in patients]
+#     )
+#     return predictions
+
+def _fetch_prediction(app_to_call_id, payload):
+    return call_model(app_to_call_id, payload)
+
+def _fetch_predictions(patients):
     logging.info("Fetching predictions")
-    predictions = await asyncio.gather(
-        *[fetch_prediction("los-predictor", f'{{"csn": {patient["mrn"]}}}') for patient in patients]
-    )
+    predictions = [_fetch_prediction("los-predictor", f'{{"csn": {patient["mrn"]}}}') for patient in patients]
     return predictions
 
 if cosmos:
@@ -55,7 +63,7 @@ def _fetch_discharges():
     logging.info(f"Fetched {len(df)} rows from SQL store")
 
     patients = df.to_dict("records")
-    predictions = asyncio.run(fetch_predictions(patients))
+    predictions = _fetch_predictions(patients)
 
     df["prediction"] = predictions
     df = df.sort_values(by="prediction", ascending=False)
