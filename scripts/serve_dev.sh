@@ -35,7 +35,12 @@ docker run \
     --mount type=bind,src="$HOME/.azure/",dst=/home/appUser/.azure/ \
     --env APPLICATIONINSIGHTS_CONNECTION_STRING \
     --env FEATURE_STORE_CONNECTION_STRING \
-    --env COSMOSDB_ENDPOINT \
+    --env COSMOS_STATE_STORE_ENDPOINT \
+    --env TENANT_ID \
+    --env KEY_VAULT_URI \
+    --env MODEL_APP_ID \
+    --env MODEL_APP_SECRET \
     --env DEBUG \
+    --env ENVIRONMENT \
     "$LOCAL_IMAGE_NAME" \
     /bin/bash -c "python app.py"
