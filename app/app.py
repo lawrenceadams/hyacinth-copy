@@ -17,13 +17,14 @@ import os
 from azure_logging import initialize_logging
 from dash import Dash, page_registry
 from layout.appshell import create_appshell
-from databases import odbc_cursor, cosmos_client
-from azure.cosmos import CosmosClient
+# from azure_log_exporter import setup_azurelog_exporter
+
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
 
 initialize_logging(environment, logging.INFO)
 logging.info("Logging initialised.")
+instrumentation_key = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING", default="")
 
 app = Dash(
     __name__,
@@ -44,13 +45,13 @@ app = Dash(
     ],
 )
 
+# setup_azurelog_exporter(environment, app.server, instrumentation_key)
+
+
 app.config.suppress_callback_exceptions = True
 app.layout = create_appshell([page_registry.values()])
 
 server = app.server
-# client = CosmosClient(
-#     url=os.environ["COSMOSDB_ENDPOINT"], credential=os.environ["COSMOSDB_KEY"]
-# )
 
 if __name__ == "__main__":
     logging.info("Starting app...")
