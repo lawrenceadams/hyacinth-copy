@@ -35,7 +35,7 @@ def _fetch_prediction(app_to_call_id, payload):
         if "outputs" in pred:
             return pred["outputs"][0]
     except Exception:
-        pass 
+            return 0
     return None
 
 
