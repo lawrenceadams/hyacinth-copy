@@ -5,10 +5,11 @@ from typing import Any
 from datetime import datetime, timezone
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential
-import struct 
+import struct
+import sqlalchemy
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
-
+connection_string = os.environ["FEATURE_STORE_CONNECTION_STRING"]
 
 def db_aad_token_struct() -> bytes:
     """
@@ -26,14 +27,25 @@ def db_aad_token_struct() -> bytes:
     return struct.pack("=i", len(token_bytes)) + token_bytes
 
 
+def sqlalchemy_connection() -> Any:
+    """
+    SQLAlchemy connection for running queries against the MSSQL feature store.
+    """
+
+    connect_args = {}
+    if "authentication" not in connection_string.lower():
+        SQL_COPT_SS_ACCESS_TOKEN = 1256
+        connect_args={"attrs_before": {SQL_COPT_SS_ACCESS_TOKEN: db_aad_token_struct()}}
+    
+    return sqlalchemy.create_engine(f"mssql+pyodbc:///?odbc_connect={connection_string}", connect_args=connect_args).connect()
+    
+
 def odbc_cursor() -> Any:
     """
     ODBC cursor for running queries against the MSSQL feature store.
 
     Documentation: https://github.com/mkleehammer/pyodbc/wiki
     """
-
-    connection_string = os.environ["FEATURE_STORE_CONNECTION_STRING"]
 
     if "authentication" not in connection_string.lower():
         SQL_COPT_SS_ACCESS_TOKEN = 1256
@@ -54,17 +66,16 @@ def cosmos_client() -> "CosmosClient":
     Documentation: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/sdk-python
     """
 
-    client = CosmosClient(
-        os.environ["COSMOS_STATE_STORE_ENDPOINT"],
-        credential=(
-            DefaultAzureCredential()
-            if environment != "local"
-            else os.environ["COSMOSDB_KEY"]
-        ),
-        connection_verify=(environment != "local"),
-    )
-    logging.info("Cosmos client created.")
-    return client
+    try:
+        client = CosmosClient(
+            os.environ["COSMOS_STATE_STORE_ENDPOINT"],
+            credential=(DefaultAzureCredential()),
+        )
+        logging.info("Cosmos client created.")
+        return client
+    except Exception as e:
+        logging.error("Failed to create Cosmos client: %s", str(e))
+        return None
 
 
 class CosmosDBLongCallbackManager:
@@ -81,16 +92,16 @@ class CosmosDBLongCallbackManager:
         self.container_name = container_name
         self.expire = expire
         self.partition_key = partition_key
-    
+
         self.create_container_if_not_exists()
-    
+
     def create_container_if_not_exists(self):
         container_list = list(self.get_database_client().list_containers())
-        container_names = [container['id'] for container in container_list]
+        container_names = [container["id"] for container in container_list]
         if self.container_name not in container_names:
             self.get_database_client().create_container(
-                id=self.container_name,
-                partition_key=self.partition_key)
+                id=self.container_name, partition_key=self.partition_key
+            )
 
     def is_expired(self, item):
         if not item or "timestamp" not in item or "expire" not in item:

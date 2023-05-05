@@ -13,41 +13,11 @@ from pages.discharges import CAMPUSES
 
 dash.register_page(__name__, path="/discharges", name="Discharges")
 
-# campus_selector = html.Div(
-#     [
-#         dmc.SegmentedControl(
-#             id="campus_selector",
-#             value=[i.get("value") for i in CAMPUSES if i.get("label") == "UCH"][0],
-#             data=CAMPUSES,
-#             persistence=True,
-#             persistence_type="local"
-#         ),
-#     ]
-# )
-# dept_selector = dmc.Container(
-#     [
-#         dmc.Select(
-#             placeholder="Select a ward",
-#             id="dept_selector",
-#             searchable=True,
-#             persistence=False,
-#         ),
-#     ],
-#     fluid=True,
-#     p="xxs",
-# )
-
 updated_time = dmc.Button(
-    id="update_button",
-    children="Not updated yet",
-    color="blue",
-    fullWidth=True
+    id="update_button", children="Not updated yet", color="blue", fullWidth=True
 )
 
-loading_overlay = dmc.LoadingOverlay(
-    id="loading_overlay",
-    children=updated_time
-)
+loading_overlay = dmc.LoadingOverlay(id="loading_overlay", children=updated_time)
 
 discharges_table = dmc.Paper(
     dtable.DataTable(
@@ -62,9 +32,10 @@ discharges_table = dmc.Paper(
             {"id": "avg_news", "name": "NEWS"},
             {"id": "admission_datetime", "name": "Admission Date"},
             {"id": "length_of_stay", "name": "Length of Stay"},
+            {"id": "prediction", "name": "Predictions"},
         ],
         style_table={"overflowX": "scroll"},
-        style_as_list_view=True,  
+        style_as_list_view=True,
         style_cell={
             "fontSize": 11,
             "padding": "5px",
@@ -77,6 +48,9 @@ discharges_table = dmc.Paper(
         sort_action="native",
         filter_action="native",
         filter_query="",
+        # page_current=0,
+        # page_size=20,
+        # page_action='custom'
     ),
     shadow="lg",
     p="md",  # padding
