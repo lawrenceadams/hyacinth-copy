@@ -1,24 +1,33 @@
 import os
 import logging
+import asyncio
 import pandas as pd
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
-
 from dash import Input, Output, callback, no_update
 
 from databases import odbc_cursor, cosmos_client, CosmosDBLongCallbackManager
 from ids import STORE_TIMER_5M
+from call_model import call_model
+
 
 AUTO_REFRESH_INTERVAL = 60 * 5
 ENVIRONMENT = os.environ.get("ENVIRONMENT", default="dev")
-
-# Read SQL queries
 DISCHARGES_QUERY = (Path(__file__).parent / "sql/discharges.sql").read_text()
 DEV_QUERY = (Path(__file__).parent / "sql/app-dev.sql").read_text()
-
-# Auto-refresh triggered
-
 cosmos = cosmos_client()
+
+
+async def fetch_prediction(app_to_call_id, payload):
+    return await asyncio.to_thread(call_model, app_to_call_id, payload)
+
+async def fetch_predictions(patients):
+    logging.info("Fetching predictions")
+    predictions = await asyncio.gather(
+        *[fetch_prediction("los-predictor", f'{{"csn": {patient["mrn"]}}}') for patient in patients]
+    )
+    return predictions
+
 if cosmos:
     cosmosdb_callback_manager = CosmosDBLongCallbackManager(
         cosmos_client(),
@@ -44,6 +53,12 @@ def _fetch_discharges():
             right_on="location_string",
         )
     logging.info(f"Fetched {len(df)} rows from SQL store")
+
+    patients = df.to_dict("records")
+    predictions = asyncio.run(fetch_predictions(patients))
+
+    df["prediction"] = predictions
+    df = df.sort_values(by="prediction", ascending=False)
     return df
 
 @callback(
@@ -53,23 +68,25 @@ def _fetch_discharges():
 def _reload(n_clicks):
     return no_update
 
-
 @callback(
     Output("discharges_table", "data"),
     Output("update_button", "children"),
     Input("update_button", "n_clicks"),
     Input(STORE_TIMER_5M, "n_intervals"),
+    # Input("discharges_table", "page_current"),
+    # Input("discharges_table", "page_size"),
 )
 def _get_discharges(n_clicks, n_intervals):
     now = datetime.now(timezone.utc)
-    if cosmos and cached_data:
+    if cosmos:
         cached_data = cosmosdb_callback_manager.get("discharges_cache")
-        logging.info("Retrieved cached data.")
-        df = cached_data
-        return (
-            cached_data,
-            f"Retrieved from Cache at {now:%H:%M:%S}",
-        )
+        if cached_data:
+            logging.info("Retrieved cached data.")
+            df = cached_data
+            return (
+                cached_data,
+                f"Retrieved from Cache at {now:%H:%M:%S}",
+            )
 
     logging.info("Refreshing cached data")
     df = _fetch_discharges()
