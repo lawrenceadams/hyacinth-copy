@@ -52,7 +52,7 @@ def call_model(app_to_call_id, payload):
 
     authority_url = f"https://login.microsoftonline.com/{tenant_id}"
     context = adal.AuthenticationContext(authority_url)
-    token = context.acquire_token_with_client_credentials(app_uri, app_id, app_secret)
+    token = context.acquire_token_with_client_credentials(app_id, app_id, app_secret)
 
     headers = {
         "Authorization": "Bearer " + token["accessToken"],

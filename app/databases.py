@@ -6,9 +6,10 @@ from datetime import datetime, timezone
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential
 import struct
+import sqlalchemy
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
-
+connection_string = os.environ["FEATURE_STORE_CONNECTION_STRING"]
 
 def db_aad_token_struct() -> bytes:
     """
@@ -26,14 +27,25 @@ def db_aad_token_struct() -> bytes:
     return struct.pack("=i", len(token_bytes)) + token_bytes
 
 
+def sqlalchemy_connection() -> Any:
+    """
+    SQLAlchemy connection for running queries against the MSSQL feature store.
+    """
+
+    connect_args = {}
+    if "authentication" not in connection_string.lower():
+        SQL_COPT_SS_ACCESS_TOKEN = 1256
+        connect_args={"attrs_before": {SQL_COPT_SS_ACCESS_TOKEN: db_aad_token_struct()}}
+    
+    return sqlalchemy.create_engine(f"mssql+pyodbc:///?odbc_connect={connection_string}", connect_args=connect_args).connect()
+    
+
 def odbc_cursor() -> Any:
     """
     ODBC cursor for running queries against the MSSQL feature store.
 
     Documentation: https://github.com/mkleehammer/pyodbc/wiki
     """
-
-    connection_string = os.environ["FEATURE_STORE_CONNECTION_STRING"]
 
     if "authentication" not in connection_string.lower():
         SQL_COPT_SS_ACCESS_TOKEN = 1256

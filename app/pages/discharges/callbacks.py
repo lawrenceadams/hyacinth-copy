@@ -6,15 +6,16 @@ from pathlib import Path
 from datetime import datetime, timezone
 from dash import Input, Output, callback, no_update
 
-from databases import odbc_cursor, cosmos_client, CosmosDBLongCallbackManager
+from databases import sqlalchemy_connection, cosmos_client, CosmosDBLongCallbackManager
+from sqlalchemy import text
 from ids import STORE_TIMER_5M
 from call_model import call_model
 
 
 AUTO_REFRESH_INTERVAL = 60 * 5
 ENVIRONMENT = os.environ.get("ENVIRONMENT", default="dev")
-DISCHARGES_QUERY = (Path(__file__).parent / "sql/discharges.sql").read_text()
-DEV_QUERY = (Path(__file__).parent / "sql/app-dev.sql").read_text()
+DISCHARGES_QUERY = text((Path(__file__).parent / "sql/discharges.sql").read_text())
+DEV_QUERY = text((Path(__file__).parent / "sql/app-dev.sql").read_text())
 cosmos = cosmos_client()
 
 
@@ -29,7 +30,11 @@ cosmos = cosmos_client()
 #     return predictions
 
 def _fetch_prediction(app_to_call_id, payload):
-    return call_model(app_to_call_id, payload)
+    pred = call_model(app_to_call_id, payload)
+    if "outputs" in pred:
+        return pred["outputs"][0]
+    else:
+        return None
 
 def _fetch_predictions(patients):
     logging.info("Fetching predictions")
@@ -47,12 +52,13 @@ if cosmos:
 
 def _fetch_discharges():
     logging.info("Fetching discharges from SQL store")
+    connection = sqlalchemy_connection()
 
     if ENVIRONMENT != "prod":
-        df = pd.read_sql(DEV_QUERY, odbc_cursor().connection)
+        df = pd.read_sql(DEV_QUERY, connection)
         df.columns = ["mrn", "firstname", "sex", "department"]
     else:
-        data = pd.read_sql(DISCHARGES_QUERY, odbc_cursor().connection)
+        data = pd.read_sql(DISCHARGES_QUERY, connection)
         beds = pd.read_json("assets/locations/bed_defaults.json")
         df = data.merge(
             beds[["location_string", "department", "room", "location_name"]],
@@ -66,7 +72,9 @@ def _fetch_discharges():
     predictions = _fetch_predictions(patients)
 
     df["prediction"] = predictions
-    df = df.sort_values(by="prediction", ascending=False)
+   # df = df.sort_values(by="prediction", ascending=False)
+
+    connection.close()
     return df
 
 @callback(

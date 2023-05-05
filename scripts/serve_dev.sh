@@ -42,5 +42,8 @@ docker run \
     --env MODEL_APP_SECRET \
     --env DEBUG \
     --env ENVIRONMENT \
+    --env TENANT_ID \
+    --env MODEL_APP_ID \
+    --env MODEL_APP_SECRET \
     "$LOCAL_IMAGE_NAME" \
     /bin/bash -c "python app.py"
