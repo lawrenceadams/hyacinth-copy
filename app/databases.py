@@ -54,17 +54,19 @@ def cosmos_client() -> "CosmosClient":
     Documentation: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/sdk-python
     """
 
-    client = CosmosClient(
-        os.environ["COSMOS_STATE_STORE_ENDPOINT"],
-        credential=(
-            DefaultAzureCredential()
-            if environment != "local"
-            else os.environ["COSMOSDB_KEY"]
-        ),
-        connection_verify=(environment != "local"),
-    )
-    logging.info("Cosmos client created.")
-    return client
+    try:
+        client = CosmosClient(
+            os.environ["COSMOS_STATE_STORE_ENDPOINT"],
+            credential=(
+                DefaultAzureCredential()
+            ),
+        )
+        logging.info("Cosmos client created.")
+        return client
+    except Exception as e:
+        logging.error("Failed to create Cosmos client: %s", str(e))
+        return None
+
 
 
 class CosmosDBLongCallbackManager:
