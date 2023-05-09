@@ -1,7 +1,7 @@
 import dash
 import dash_mantine_components as dmc
 import json
-from dash import dash_table as dtable, html
+from dash import dash_table as dtable, html, dcc
 from pathlib import Path
 import ids
 from dash_iconify import DashIconify
@@ -25,7 +25,7 @@ discharges_table = dmc.Paper(
         columns=[
             {"id": "department", "name": "Ward"},
             {"id": "room", "name": "Bed"},
-            {"id": "mrn", "name": "MRN"},
+            # {"id": "csn", "name": "CSN"},
             {"id": "firstname", "name": "First Name"},
             {"id": "lastname", "name": "Last Name"},
             {"id": "sex", "name": "Sex"},
@@ -40,7 +40,7 @@ discharges_table = dmc.Paper(
             "fontSize": 11,
             "padding": "5px",
         },
-        style_data={"color": "black", "backgroundColor": "white"},
+        # style_data={"color": "black", "backgroundColor": "red"},
         # striped rows
         markdown_options={"html": True},
         persistence=False,
@@ -51,6 +51,14 @@ discharges_table = dmc.Paper(
         # page_current=0,
         # page_size=20,
         # page_action='custom'
+        # Highlight if going to be discharged
+        style_data_conditional = [{
+            'if': {
+                'filter_query': '{prediction} = 1',
+            },
+            'backgroundColor': '#154734',
+            'color': 'white'
+        }]
     ),
     shadow="lg",
     p="md",  # padding
@@ -65,6 +73,7 @@ body = dmc.Container(
                 dmc.Col(discharges_table, span=12),
             ],
         ),
+        dcc.Graph(id="inpatient_los_histogram"),
     ],
     style={"width": "100vw"},
     fluid=True,

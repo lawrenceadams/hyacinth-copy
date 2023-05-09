@@ -70,7 +70,7 @@ los AS (
         ) AS log_number
     FROM [dbo].[length_of_stay_v1]
 )
-SELECT loc.csn,
+SELECT TOP 15 loc.csn,
     loc.horizon_datetime,
     loc.hl7_location,
     -- adm.department,

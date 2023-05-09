@@ -22,7 +22,7 @@ from layout.appshell import create_appshell
 
 environment = os.environ.get("ENVIRONMENT", default="dev")
 
-initialize_logging(environment, logging.INFO)
+initialize_logging(environment, logging.WARN)
 logging.info("Logging initialised.")
 instrumentation_key = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING", default="")
 
@@ -55,4 +55,4 @@ server = app.server
 
 if __name__ == "__main__":
     logging.info("Starting app...")
-    app.run_server(host="0.0.0.0", port=8000, debug=(environment == "local"))
+    app.run_server(host="0.0.0.0", port=8000, debug=True)

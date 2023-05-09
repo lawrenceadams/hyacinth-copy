@@ -5,6 +5,9 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime, timezone
 from dash import Input, Output, callback, no_update
+import plotly.express as px
+import pickle
+import codecs
 
 from databases import sqlalchemy_connection, cosmos_client, CosmosDBLongCallbackManager
 from sqlalchemy import text
@@ -16,8 +19,22 @@ AUTO_REFRESH_INTERVAL = 60 * 5
 ENVIRONMENT = os.environ.get("ENVIRONMENT", default="dev")
 DISCHARGES_QUERY = text((Path(__file__).parent / "sql/discharges.sql").read_text())
 DEV_QUERY = text((Path(__file__).parent / "sql/app-dev.sql").read_text())
-cosmos = cosmos_client()
+DATABASE_KEY = "database_cache"
 
+cosmos = cosmos_client()
+use_cosmos = False
+
+try: 
+    cosmosdb_callback_manager = CosmosDBLongCallbackManager(
+        cosmos_client(),
+        database_name="hyacinth-state",
+        container_name="hyacinth",
+        expire=(60*2),
+        partition_key="/id",
+    )
+    use_cosmos = True
+except:
+    pass
 
 # async def _async_fetch_prediction(app_to_call_id, payload):
 #     return await asyncio.to_thread(call_model, app_to_call_id, payload)
@@ -32,31 +49,18 @@ cosmos = cosmos_client()
 def _fetch_prediction(app_to_call_id, payload):
     try:
         pred = call_model(app_to_call_id, payload)
-        if "outputs" in pred:
+        logging.warn(pred)
+        if "outputs" in pred and len(pred["outputs"]) > 0:
             return pred["outputs"][0]
-    except Exception:
-            return 0
-    return None
-
+        else:
+            return -1
+    except:
+        return -2
 
 def _fetch_predictions(patients):
     logging.info("Fetching predictions")
-    predictions = []
-    for patient in patients:
-        pred = _fetch_prediction("los-predictor", f'{{"csn": {patient["mrn"]}}}')
-        if pred is not None:
-            predictions.append(pred)
+    predictions = [_fetch_prediction("los-predictor", f'{{"csn": {patient["csn"]}}}') for patient in patients]
     return predictions
-
-
-if cosmos:
-    cosmosdb_callback_manager = CosmosDBLongCallbackManager(
-        cosmos_client(),
-        database_name="hyacinth-state",
-        container_name="hyacinth",
-        expire=AUTO_REFRESH_INTERVAL,
-        partition_key="/Id",
-    )
 
 def _fetch_discharges():
     logging.info("Fetching discharges from SQL store")
@@ -95,6 +99,7 @@ def _reload(n_clicks):
 @callback(
     Output("discharges_table", "data"),
     Output("update_button", "children"),
+    Output("inpatient_los_histogram", "figure"),
     Input("update_button", "n_clicks"),
     Input(STORE_TIMER_5M, "n_intervals"),
     # Input("discharges_table", "page_current"),
@@ -102,27 +107,41 @@ def _reload(n_clicks):
 )
 def _get_discharges(n_clicks, n_intervals):
     now = datetime.now(timezone.utc)
-    if cosmos:
-        cached_data = cosmosdb_callback_manager.get("discharges_cache")
+
+    if use_cosmos:
+        cached_data = cosmosdb_callback_manager.get(DATABASE_KEY)
         if cached_data:
             logging.info("Retrieved cached data.")
-            df = cached_data
+            # Need to decode and unpickle data to ensure datatype consistency
+            df = pickle.loads(codecs.decode(cached_data.encode(), "base64"))
             return (
-                cached_data,
+                df.to_dict('records'), 
                 f"Retrieved from Cache at {now:%H:%M:%S}",
+                px.histogram(df['length_of_stay'])
             )
 
     logging.info("Refreshing cached data")
     df = _fetch_discharges()
-    last_updated = now
 
-    if cosmos:
+    # Anonymise for demo
+    df['firstname'] = '***'
+    df['lastname'] = '***'
+
+    # Convert seconds to days
+    df['length_of_stay'] = df['length_of_stay'] / (60*60*24)
+
+    # Round current LoS and Average NEWS
+    df['avg_news'] = df['avg_news'].round(2)
+    df['length_of_stay'] = df['length_of_stay'].round(2)
+
+    if use_cosmos:
         cosmosdb_callback_manager.set(
-            cache_key="discharges_cache", value=df.to_dict("records")
+            # Dump object as base64 encoded pickle file for data consistency
+            cache_key=DATABASE_KEY, value=codecs.encode(pickle.dumps(df), "base64").decode()
     )
-        
+    
     return (
-        df.to_dict("records"),
-        f"Retrieved from Feature Store. Last updated at {last_updated:%H:%M:%S}",
+        df.to_dict('records'),
+        f"Retrieved from Feature Store. Last updated at {now:%H:%M:%S}",
+        px.histogram(df['length_of_stay'])
     )
-

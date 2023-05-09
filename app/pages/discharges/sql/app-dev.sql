@@ -1,4 +1,4 @@
-SELECT TOP 50 [mrn].[mrn],
+SELECT TOP 10 [mrn].[mrn],
     [name].[firstname],
     [sex].[sex],
     [loc].[hl7_location]
