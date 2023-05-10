@@ -4,7 +4,7 @@ import logging
 import pandas as pd
 from pathlib import Path
 from datetime import datetime, timezone
-from dash import Input, Output, callback, no_update
+from dash import Input, Output, State, callback, no_update
 import plotly.express as px
 import pickle
 import codecs
@@ -68,7 +68,7 @@ def _fetch_discharges():
 
     if ENVIRONMENT != "prod":
         df = pd.read_sql(DEV_QUERY, connection)
-        df.columns = ["mrn", "firstname", "sex", "department"]
+        df.columns = ["csn", "firstname", "sex", "department"]
     else:
         data = pd.read_sql(DISCHARGES_QUERY, connection)
         beds = pd.read_json("assets/locations/bed_defaults.json")
@@ -78,6 +78,17 @@ def _fetch_discharges():
             left_on="hl7_location",
             right_on="location_string",
         )
+         # Anonymise for demo
+        df['firstname'] = '***'
+        df['lastname'] = '***'
+
+        # Convert seconds to days
+        df['length_of_stay'] = df['length_of_stay'] / (60*60*24)
+
+        # Round current LoS and Average NEWS
+        df['avg_news'] = df['avg_news'].round(2)
+        df['length_of_stay'] = df['length_of_stay'].round(2)
+
     logging.info(f"Fetched {len(df)} rows from SQL store")
 
     patients = df.to_dict("records")
@@ -117,22 +128,11 @@ def _get_discharges(n_clicks, n_intervals):
             return (
                 df.to_dict('records'), 
                 f"Retrieved from Cache at {now:%H:%M:%S}",
-                px.histogram(df['length_of_stay'])
+                px.histogram(df['length_of_stay']) if ENVIRONMENT == "prod" else None
             )
 
     logging.info("Refreshing cached data")
     df = _fetch_discharges()
-
-    # Anonymise for demo
-    df['firstname'] = '***'
-    df['lastname'] = '***'
-
-    # Convert seconds to days
-    df['length_of_stay'] = df['length_of_stay'] / (60*60*24)
-
-    # Round current LoS and Average NEWS
-    df['avg_news'] = df['avg_news'].round(2)
-    df['length_of_stay'] = df['length_of_stay'].round(2)
 
     if use_cosmos:
         cosmosdb_callback_manager.set(
@@ -142,6 +142,43 @@ def _get_discharges(n_clicks, n_intervals):
     
     return (
         df.to_dict('records'),
-        f"Retrieved from Feature Store. Last updated at {now:%H:%M:%S}",
-        px.histogram(df['length_of_stay'])
+        f"Retrieved from Feature Store at {now:%H:%M:%S}",
+        px.histogram(df['length_of_stay']) if ENVIRONMENT == "prod" else None
     )
+
+@callback(
+    Output("model_card", "opened"),
+    Input("modal_button", "n_clicks"),
+    State("model_card", "opened"),
+    prevent_initial_call=True,
+)
+def _modal(nc, opened):
+    return not opened
+
+
+@callback(
+        Output("force_refresh_overlay", "children"),
+        Input("force_refresh_button", "n_clicks")
+)
+def _reload(n_clicks):
+    return no_update
+
+
+@callback(
+    Output("force_refresh_button", "children"),
+    Input("force_refresh_button", "n_clicks"),
+    prevent_initial_call=True,
+)
+def _refresh_cache(nc):
+    now = datetime.now(timezone.utc)
+    if use_cosmos:
+        df = _fetch_discharges()
+        cosmosdb_callback_manager.set(
+            # Dump object as base64 encoded pickle file for data consistency
+            cache_key=DATABASE_KEY, value=codecs.encode(pickle.dumps(df), "base64").decode()
+    )
+        return f"Cache force-updated at {now:%H:%M:%S}"
+    
+    else:
+        return "No connection to Cosmos cache."
+    
